@@ -4,14 +4,27 @@ inputs:
   github_token:
     description: 'Required for permission to tag the repo'
     required: true
+  project_type:
+    description: 'The type of project which controls how the version is retrieved'
+    required: true
+
 runs:
   using: "composite"
   steps:
     - name: Retrieve version from poetry
+      if: ${{ inputs.project_type == 'python' }}
       shell: bash
       run: |
         PKG_VERSION=$(poetry version --short)
         echo "VERSION=$PKG_VERSION" >> $GITHUB_ENV
+
+    - name: Retrieve version from csproj
+      if: ${{ inputs.project_type == 'csharp' }}
+      shell: powershell
+      run: |
+        $XML = [Xml] (Get-Content .\jx.cs.core.csproj)
+        $PKG_VERSION = $XML.Project.PropertyGroup.Version
+        Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$PKG_VERSION"
 
     - name: Tag commit using retrieved version
       uses: mathieudutour/github-tag-action@v6.0
